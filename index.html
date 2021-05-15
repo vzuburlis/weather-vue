@@ -1,0 +1,132 @@
+<!DOCTYPE>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8"/>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+  <script src="https://unpkg.com/vue-router/dist/vue-router.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
+  <style>
+    body{
+      background: wheat;
+      height: 100vh;
+    }
+    #weather-app{
+      max-width: 500px;
+      margin: auto;
+    }
+    #weather-app-pad{
+      background: white;
+      padding: 1em;
+      box-shadow: 0 0 1em grey;
+      max-height: 70vh;
+      overflow: auto;
+    }
+    #weather-app-pad button{
+      float:right;
+    }
+  </style>
+</head>
+
+<div id="weather-app">
+  <h2>Weather App!</h2>
+  <p>
+    <router-link to="/weather">Weather</router-link>
+    <router-link to="/favorites">Favorites</router-link>
+  </p>
+  <div id="weather-app-pad">
+    <router-view></router-view>
+  </div>
+</div>
+
+<script>
+
+
+Vue.component('weather-item', {
+  props: ['name'],
+  data: function(){
+    return {
+      info: null
+    }
+  },
+  mounted () {
+    axios
+      .get('http://api.openweathermap.org/data/2.5/weather?q='+this.name+'&appid={token}')
+      .then(response => (this.info = response.data))
+  },
+  template: '<div v-if="info"><button @click="$parent.addFavorite(name)">+ Favorite</button><b>{{name}}</b><br>{{info.weather[0].main}}<br>{{info.main.temp}}<hr></div><div v-else><b>{{name}}</b>Loading...<hr></div>'
+})
+
+
+
+WeatherList = {
+  props: ['name'],
+  data: function(){
+    return {
+      items: [
+        'Almyros', 'Trikala', 'Volos', 'Kavala', 'Athens', 'Mexico City', 'Guadalajara', 'Oaxaca', 'Los Angeles', 'Tokyo'
+      ]
+    }
+  },
+  methods: {
+    addFavorite: function(name) {
+      storedValue = localStorage.getItem('favorites')??'[]'
+      favorites = JSON.parse(storedValue)
+      if(!favorites.includes(name)) {
+        favorites.push(name)
+        localStorage.setItem('favorites', JSON.stringify(favorites));
+      }
+      alert('Ya esta favorito ahora');
+    }
+  },
+  template: '<div><weather-item v-for="item in items" :name="item" /></div>'
+}
+
+Vue.component('favorite-item', {
+  props: ['name'],
+  data: function(){
+    return {}
+  },
+  methods: {
+    removeFavorite: function(name) {
+      storedValue = localStorage.getItem('favorites')??'[]'
+      favorites = JSON.parse(storedValue)
+      index = favorites.indexOf(name);
+      if (index !== -1) {
+        favorites.splice(index, 1);
+        localStorage.setItem('favorites', JSON.stringify(favorites));
+        this.$forceUpdate();
+        this.$router.go()
+      }
+    }
+  },
+  template: '<div><button @click="removeFavorite(name)">- Favorite</button><b>{{name}}</b><br><br><hr></div>'
+})
+
+FavoritesList = {
+  props: ['name'],
+  data: function(){
+    storedValue = localStorage.getItem('favorites')??'[]'
+    favorites = JSON.parse(storedValue)
+    return {
+      items: favorites
+    }
+  },
+  template: '<div><favorite-item v-for="item in items" :name="item" /></div>'
+}
+
+
+const router = new VueRouter({
+  routes: [
+    { path: '/weather', component: WeatherList},
+    { path: '/favorites', component: FavoritesList},
+    //{ path: '/', redirect: "/weather" },
+    { path: '*', component: {template:'<div>Ruta no encontrada</div>'}}
+  ]
+})
+
+
+const app = new Vue({
+  router
+}).$mount('#weather-app')
+</script>
